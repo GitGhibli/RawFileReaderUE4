@@ -14,52 +14,48 @@ URawFileReaderComponent::URawFileReaderComponent()
 	// ...
 }
 
-
-// Called when the game starts
 void URawFileReaderComponent::BeginPlay()
 {
 	Super::BeginPlay();
 }
 
-void URawFileReaderComponent::ReadFile(FString filePath, int Width, int Height) {
-	//3625
-	//6250
-	TFunction<int16**()> Task = [filePath, Width, Height]()
-		-> int16** {
+void URawFileReaderComponent::ReadFile(FString filePath, int width, int height) {
+	TFunction<void()> Task = [=]() {
+		UE_LOG(LogTemp, Warning, TEXT("Task called in C++"));
+
 		std::ifstream floatFile(*filePath, std::ios::binary | std::ios::ate);
 
-		int16** map = new int16_t*[Width];
+		Map = new int16_t*[width];
 
 		if (floatFile.is_open()) {
 			int fileSize = floatFile.tellg();
 			floatFile.seekg(0);
-			for (int i = 0; i < Width; i++) {
-				map[i] = new int16_t[Height];
-				floatFile.read((char*)map[i], Height * sizeof(int16_t));
+			for (int i = 0; i < width; i++) {
+				Map[i] = new int16_t[height];
+				floatFile.read((char*)Map[i], height * sizeof(int16_t));
 			}
 		}
-
-		FPlatformProcess::Sleep(3);
-
-		return map;
+		else {
+			UE_LOG(LogTemp, Warning, TEXT("File not found"));
+		}
 	};
 
-	auto future = Async(EAsyncExecution::ThreadPool, Task);	
+	TFunction<void()> Callback = [this]() {
+		UE_LOG(LogTemp, Warning, TEXT("Callback called in C++")); 
+		IsMapReady = true;
+	};
 
-	Map = future.Get();
+	Async(EAsyncExecution::ThreadPool, Task, Callback);
 	
-	UE_LOG(LogTemp, Warning, TEXT("File Uploaded in C++"));
+	UE_LOG(LogTemp, Warning, TEXT("Read file function ended in C++"));
 }
 
 int32 URawFileReaderComponent::GetMapValue(int x, int y) {
 	return (int32)Map[x][y];
 }
 
-// Called every frame
 void URawFileReaderComponent::TickComponent(float DeltaTime, ELevelTick TickType, FActorComponentTickFunction* ThisTickFunction)
 {
 	Super::TickComponent(DeltaTime, TickType, ThisTickFunction);
-
-	// ...
 }
 
